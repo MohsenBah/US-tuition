@@ -1,6 +1,6 @@
 ---
-title: "ST694Project"
-author: "Mohsen and Lianghao"
+title: "Us tuition"
+author: "Mohsen "
 date: "31/03/2021"
 output:
   html_document:
@@ -17,7 +17,6 @@ library(ISLR)
 ```
 
 ```{r}
-setwd('/Users/mohsenbahremani/My files/Master/Second term/ST694/Project')
 colleges.colnames <- c(
     "FID",
     "names",
