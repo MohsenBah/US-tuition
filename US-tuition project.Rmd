@@ -1,0 +1,424 @@
+---
+title: "ST694Project"
+author: "Mohsen and Lianghao"
+date: "31/03/2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+#library(corrgram)
+library(ISLR)
+```
+
+```{r}
+setwd('/Users/mohsenbahremani/My files/Master/Second term/ST694/Project')
+colleges.colnames <- c(
+    "FID",
+    "names",
+    "zip",
+    "Private",
+    "Math",
+    "verbal",
+    "combined",
+    "average.ACT",
+    "1stqmath",
+    "3rdqmath",
+    "1stqverbal",
+    "3rdqverbal",
+    "1stqACT",
+    "3rdqACT",
+    "Apps",
+    "Accept",
+    "Enroll",
+    "Top10perc", 
+    "Top25perc",
+    "F.Undergrad",
+    "P.Undergrad",
+    "instate",
+    "Outstate",
+    "Room.Board",
+    "room",
+    "board",
+    "add.cost",
+    "Books",
+    "Personal",
+    "PhD",
+    "Terminal",
+    "S.F.Ratio", 
+    "perc.alumni",
+    "Expend",
+    "Grad.Rate"
+)
+colleges <- read_csv("usnews.data", col_names = colleges.colnames, na="*")
+
+profs.colnames <- c(
+    "FID",
+    "names",
+    "zip",
+    "type",
+    "ave.salary.prf",
+    "ave.salary.acprf",
+    "ave.salary.asprf",
+    "ave.salary.allprf",
+    "ave.comp.prf",
+    "ave.comp.acprf",
+    "ave.comp.asprf",
+    "ave.comp.allprf",
+    "no.prf",
+    "no.acprf",
+    "no.asprf",
+    "no.inprf",
+    "no.allprf"
+)
+profs <- read_csv("aaup.data",col_names = profs.colnames, na = "*")
+```
+
+```{r}
+colleges %>% summarize(distinct = n_distinct(names)) %>% pull()
+```
+We have 1302 rows but 1274 universities?
+
+```{r}
+colleges %>% summarize(distinct = n_distinct(FID)) %>% pull()
+```
+But Federal IDs are 1302?
+
+```{r}
+colleges[which(duplicated(colleges[,2])==TRUE),]
+```
+The similar universities' name are in the different states.
+
+```{r}
+summary(colleges)
+```
+The math, verbal, ACT's scores have a lot of NA, i.e. about more than 500 out of 1302, so we cannot take these variables into account.
+
+Also, Room expense and board expense have a lot of NAs, but column which is represent summation of these two variables only has 76 NAs.
+
+We decided to predict out of state tuition, so we omit 20 NAs in this variables.
+
+```{r}
+
+colleges <- colleges[!is.na(colleges$Outstate),]
+colleges$Elite <- factor(ifelse(colleges$Top10perc <= 50, "No", "Yes"))
+colleges$enrollper <- 100*colleges$Enroll/colleges$Accept
+colleges$acceptper <- 100*colleges$Accept/colleges$Apps
+colleges$fulltimeper <- 100*colleges$F.Undergrad/(colleges$F.Undergrad + colleges$P.Undergrad)
+colleges <- colleges[,-c(5:17,20:21,25,26)]
+```
+We add 4 new variables by using currents variables: 
+1-Elite : if 50% or more of students of a university came from top high schools,we name this university as ELite, universities with high reputation attract better students and tuition can be higher. 
+2- Enroll rate: what percentages of students who were admitted enroll in university?
+
+3- accept rate: what percentages of applicants are admitted?
+
+4- Full time student rate: what percentages of students are full-time?
+```{r}
+summary(profs)
+```
+The number of NAs is acceptable. we go further with this data, and according to the out of state tuition, the salaries of professors based on the ranking is not important, so we the summation of all professors' salary and compensation to one column.
+On the contrary, number of full professor compared to number of instructor is an important factor to compare universities. therefore, we can use these separated columns or one weighted summation column. Initially, we use separated columns.
+```{r}
+profs$allsalary=profs$ave.salary.allprf+profs$ave.comp.allprf
+profs=profs[,-c(2:12,17)]
+```
+
+By using the left-join, we have one data frame now.
+```{r}
+colleges %>% left_join(profs, by=c("FID")) -> df
+
+```
+
+
+```{r}
+library(corrplot)
+correlation <- cor(df[c(4:18,20:27)], use="pairwise.complete.obs")
+corrplot(correlation)
+```
+It appears that Apps Accept and Enroll are all strong correlated amongs themselves. Top10perc & Top25Perc are all highly correlated amongs themselves. Terminal and PHD are also high correlated. F.Undergrad is strongly correlated wth Apps, Accept, and Enroll. This plot just easily identifies for the continuous variables which ones are correlated or not. The blue means a positive relationship and the red/orange means a negative relationship. All the variables that I mentioned being highly correlated are positive relationship amongst them selves.
+
+```{r}
+par(mfrow=c(1,2))
+plot(as.factor(df$Private),df$Outstate,xlab="Private",ylab="Outstate")
+plot(df$Elite,df$Outstate,xlab="Elite",ylab="Outstate")
+```
+(public=1, private=2)
+public universities has lower out-state tuition.
+Non-elite universities has lower out-state tuition too.
+
+```{r}
+par(mfrow=c(1,2))
+plot(as.factor(df$Private),df$allsalary,xlab="Private",ylab="Salary")
+plot(df$Elite,df$allsalary,xlab="Elite",ylab="Salary")
+```
+
+
+```{r}
+hist(df$Outstate, col=23)
+```
+
+```{r}
+df2 <- df
+df2 = na.omit(df2)
+```
+(I deleted all NAs, but we need to impute true values)
+
+test- train splite
+
+```{r}
+set.seed(1234)
+df2 = df2[-c(1:3)]
+df2$Private = as.factor(df2$Private)
+College.train <- df2%>%sample_frac(0.70)
+train_index <- as.numeric(rownames(College.train))   
+College.test <- df2[-train_index, ]
+
+```
+
+```{r}
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+library(leaps)
+lm.subset.fit = regsubsets(Outstate~., data = df2)
+reg.summary = summary(lm.subset.fit)
+reg.summary
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(reg.summary$rss,xlab="Number of Variables",ylab="RSS",type="l")
+plot(reg.summary$adjr2,xlab="Number of Variables",ylab="Adjusted RSq",type="l")
+```
+
+```{r}
+which.max(reg.summary$adjr2)
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(lm.subset.fit, scale="adjr2")
+plot(lm.subset.fit, scale="bic")
+```
+
+```{r}
+
+```
+
+```{r}
+
+####### Step() function for forward, backward, and hybrid #####
+
+result.null <- lm(Outstate~1, data=df2)
+result.full <- lm(Outstate~., data=df2) 
+
+
+step(result.null,scope=list(upper=result.full), data=df2, direction="both")
+```
+
+
+
+
+```{r}
+
+new_train=College.train[,c("instate","no.acprf","enrollper","add.cost","no.inprf","S.F.Ratio","PhD", "allsalary" , "Grad.Rate","Elite","Private","Outstate")]
+new_test=College.test[,c("instate","no.acprf","enrollper","add.cost","no.inprf","S.F.Ratio","PhD", "allsalary" , "Grad.Rate","Elite","Private","Outstate")]
+
+lm_fit <- lm(Outstate ~., data=new_train)
+#test error
+lm_pred = predict(lm_fit, new_test)
+lm.err= mean((as.numeric(unlist(new_test[, "Outstate"])) - lm_pred)^2)
+lm.err
+```
+
+
+```{r}
+set.seed(1234)
+library(caret)
+library(glmnet)
+train_mat <- dummyVars(Outstate ~ instate+Private+no.acprf+enrollper+add.cost+Elite+no.inprf+S.F.Ratio+  PhD + allsalary + Grad.Rate, data = College.train, fullRank = F) %>%
+  predict(newdata = College.train) %>%
+  as.matrix()
+
+test_mat <- dummyVars(Outstate ~ instate+Private+no.acprf+enrollper+add.cost+Elite+no.inprf+S.F.Ratio+PhD + allsalary + Grad.Rate, data = College.test, fullRank = F) %>%
+  predict(newdata = College.test) %>%
+  as.matrix()
+model_lasso <- cv.glmnet(y = College.train$Outstate, 
+                         x = train_mat, 
+                         alpha = 1, 
+                         lambda = 10^seq(2, -2, length = 100), 
+                         standardize = TRUE, 
+                         nfolds = 5, 
+                         thresh = 1e-12)
+
+data.frame(lambda = model_lasso$lambda, 
+           cv_mse = model_lasso$cvm, 
+           nonzero_coeff = model_lasso$nzero) %>%
+  ggplot(aes(x = lambda, y = cv_mse, col = nonzero_coeff)) + 
+  geom_point() + 
+  geom_line() + 
+  geom_vline(xintercept = model_lasso$lambda.min, col = "deepskyblue3") +
+  geom_hline(yintercept = min(model_lasso$cvm), col = "deepskyblue3") +
+  scale_x_continuous(trans = 'log10', breaks = c(0.01, 0.1, 1, 10, 100), labels = c(0.01, 0.1, 1, 10, 100)) + 
+  scale_y_continuous(labels = scales::comma_format()) + 
+  theme(legend.position = "bottom") + 
+  scale_color_gradient(low = "red", high = "green") +
+  labs(x = "Lambda", 
+       y = "Cross-Validation MSE", 
+       col = "Non-Zero Coefficients:", 
+       title = "Lasso - Lambda Selection (Using 5-Fold Cross-Validation)")
+```
+
+```{r}
+model_lasso_best <- glmnet(y = College.train$Outstate,
+                           x = train_mat,
+                           alpha = 1, 
+                           lambda = 10^seq(2,-5, length = 100))
+
+lasso_pred <- predict(model_lasso_best, s = model_lasso$lambda.min, newx = test_mat)
+(err.lasso <- mean((lasso_pred - College.test$Outstate)^2))
+```
+
+```{r}
+lasso.coef = predict(model_lasso_best, s=model_lasso$lambda.min, type="coefficients")
+lasso.coef
+```
+
+```{r}
+par(mfrow=c(3,4))
+require(gam)
+gam.fit <- gam(Outstate ~ 
+                 Private +   # categorical variable
+                 s(instate,3) + s(no.acprf,3) + s(enrollper,3) + 
+                 s(Grad.Rate,3) + s(add.cost,3) + Elite + s(no.inprf,3) +  s(S.F.Ratio,3) + s(PhD,3) +s(allsalary,3) , 
+                 data=College.train)
+plot(gam.fit, se=TRUE, col="blue")
+```
+```{r}
+gam_pred <- predict(gam.fit, College.test)
+(err.gam <- mean((College.test$Outstate - gam_pred)^2))
+```
+
+```{r}
+summary(gam.fit)
+```
+
+```{r}
+require(glmnet)
+xmat.train <- model.matrix(Outstate ~ ., data=new_train)[,-1]
+xmat.test <- model.matrix(Outstate ~ ., data=new_test)[,-1]
+fit.ridge <- cv.glmnet(xmat.train, new_train$Outstate, alpha=0)
+(lambda <- fit.ridge$lambda.min)  # optimal lambda
+pred.ridge <- predict(fit.ridge, s=lambda, newx=xmat.test)
+(err.ridge <- mean((new_test$Outstate - pred.ridge)^2))  
+coef.ridge <- predict(fit.ridge, type="coefficients", s=lambda)[1:11,]
+coef.ridge[coef.ridge != 0]
+```
+
+
+```{r}
+require(pls)
+set.seed(1)
+
+fit.pcr <- pcr(Outstate~., data=new_train, scale=TRUE, validation="CV")
+validationplot(fit.pcr, val.type="MSEP")
+summary(fit.pcr)
+pred.pcr <- predict(fit.pcr, new_test, ncomp=11)  # min Cv at M=16
+(err.pcr <- mean((new_test$Outstate - pred.pcr)^2)) 
+```
+
+
+```{r}
+require(pls)
+set.seed(1)
+fit.pls <- plsr(Outstate~., data=new_train, scale=TRUE, validation="CV")
+validationplot(fit.pls, val.type="MSEP")
+summary(fit.pls)
+pred.pls <- predict(fit.pls, new_test, ncomp=10)  # min Cv at M=10
+(err.pls <- mean((new_test$Outstate - pred.pls)^2))  
+```
+```{r}
+library(tree)
+df.tree = tree(Outstate~., data=new_train)
+summary(df.tree)
+df.tree
+plot(df.tree)
+text(df.tree, pretty=0,cex=.75)
+```
+```{r}
+tree.pred = predict(df.tree, new_test)
+err.tree <- mean((new_test$Outstate - tree.pred)^2)
+err.tree
+```
+
+
+```{r}
+cv.df = cv.tree(df.tree, FUN=prune.tree)
+plot(cv.df$size, cv.df$dev, type="b", xlab="Tree Size", ylab="Deviance")
+
+```
+
+
+```{r}
+df.pruned = prune.tree(df.tree, best=8)
+summary(df.pruned)
+pred.pruned = predict(df.pruned, new_test)
+err.tree.p <- mean((new_test$Outstate - pred.pruned)^2)
+err.tree.p
+```
+
+
+```{r}
+fit.cubist <- train(Outstate~ ., data = new_train, method = "cubist")
+
+cubist_pred <- predict(fit.cubist,new_test)
+
+err.cubist<- mean((new_test$Outstate - cubist_pred)^2)
+err.cubist
+```
+
+
+```{r}
+err.all <- c(lm.err, err.ridge, err.lasso,err.gam, err.pcr, err.pls,err.tree,err.cubist)
+names(err.all) <- c("lm", "ridge", "lasso", "gam", "pcr", "pls", 'tree',"cubist")
+barplot(err.all, col = c("lightblue", "mistyrose", "lightcyan","red","lavender", "cornsilk", 'blue', "green"))
+```
+
+```{r}
+
+lares::mplot_density(tag = College.test$Outstate, 
+                     score = gam_pred,
+                     subtitle = "Out of state Model",
+                     model_name = "GAM")
+lares::mplot_density(tag = new_test$Outstate, 
+                     score = cubist_pred,
+                     subtitle = "Out of state Model",
+                     model_name = "Cubist")
+
+lares::mplot_density(tag = new_test$Outstate, 
+                     score = pred.pruned,
+                     subtitle = "Out of state Model",
+                     model_name = "Tree")
+
+```
+```{r}
+lares::mplot_lineal(tag = new_test$Outstate, 
+                     score = cubist_pred,
+                     subtitle = "Out of state Model",
+                     model_name = "Cubist")
+                   
+```
+
+
